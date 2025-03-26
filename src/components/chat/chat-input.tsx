@@ -34,8 +34,8 @@ export default function ChatInput({
   return (
     <form onSubmit={handleSubmit} className="relative">
       <Textarea
-        placeholder="Type your message here..."
-        className="min-h-12 pr-16 resize-none"
+        placeholder="输入您的问题..."
+        className="min-h-[60px] resize-none pr-16 py-4 rounded-xl border-primary/20 focus-visible:ring-primary/30"
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         onKeyDown={handleKeyDown}
@@ -45,7 +45,7 @@ export default function ChatInput({
         size="icon"
         type="submit"
         disabled={!message.trim() || isLoading}
-        className="absolute right-2 bottom-2"
+        className="absolute right-2 bottom-2.5 bg-primary hover:bg-primary/90 rounded-lg"
       >
         <SendIcon className="h-4 w-4" />
       </Button>
