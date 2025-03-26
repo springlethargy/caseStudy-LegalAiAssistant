@@ -46,20 +46,19 @@ export default function ChatPage() {
     setIsLoading(true);
 
     try {
-      // Simulate AI response after a delay
-      setTimeout(() => {
-        addMessage("assistant", generateResponse(message));
-        setIsLoading(false);
-      }, 1000);
+      // Call the API
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
 
-      // In a real application, you'd make an API call here
-      // const response = await fetch('/api/chat', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ message })
-      // });
-      // const data = await response.json();
-      // addMessage('assistant', data.message);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      addMessage("assistant", data.message);
     } catch (error) {
       console.error("Error sending message:", error);
       addMessage(
@@ -68,21 +67,6 @@ export default function ChatPage() {
       );
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  // Simple response generator for demo
-  const generateResponse = (message: string) => {
-    const lowerMessage = message.toLowerCase();
-
-    if (lowerMessage.includes("hello") || lowerMessage.includes("hi")) {
-      return "Hello! How can I assist you with UCASS today?";
-    } else if (lowerMessage.includes("help")) {
-      return "I'm here to help! You can ask me questions about UCASS, and I'll do my best to assist you.";
-    } else if (lowerMessage.includes("thank")) {
-      return "You're welcome! Is there anything else you'd like to know?";
-    } else {
-      return "I understand you're asking about UCASS. As a demo, I have limited responses. In a complete implementation, I would connect to an API to provide relevant answers.";
     }
   };
 
