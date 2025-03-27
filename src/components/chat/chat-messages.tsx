@@ -2,6 +2,7 @@ import { Message } from "@/app/page";
 import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 interface ChatMessagesProps {
   messages: Message[];
@@ -16,24 +17,12 @@ export default function ChatMessages({
     <div className="space-y-6">
       {messages.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12">
-          <div className="rounded-full bg-primary/10 p-4 mb-4">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-8 w-8 text-primary"
-            >
-              <path d="M15 6.5v4a1.5 1.5 0 0 1-1.5 1.5H6.5a1.5 1.5 0 0 1 0-3H9" />
-              <path d="M9 8.5v-5H3a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V8.5Z" />
-            </svg>
+          <div className="p-4 mb-4">
+            <Image draggable={false} width={400} height={450} src={'/ucass_logo.png'} alt="The ucass logo"/>
           </div>
-          <h3 className="text-lg font-medium mb-1">欢迎使用 UCASS 助手</h3>
+          <h3 className="text-lg font-medium mb-1">欢迎使用社问</h3>
           <p className="text-sm text-muted-foreground text-center max-w-sm">
-            有任何关于UCASS的问题，请在下方输入框中提问
+            有任何关于社科大的问题，请在下方输入框中提问
           </p>
         </div>
       ) : (

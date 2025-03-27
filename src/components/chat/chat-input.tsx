@@ -35,7 +35,7 @@ export default function ChatInput({
     <form onSubmit={handleSubmit} className="relative">
       <Textarea
         placeholder="输入您的问题..."
-        className="min-h-[60px] resize-none pr-16 py-4 rounded-xl border-primary/20 focus-visible:ring-primary/30"
+        className="min-h-[40px] resize-none pr-16 py-4 rounded-xl border-primary/20 focus-visible:ring-primary/30 align-middle"
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         onKeyDown={handleKeyDown}

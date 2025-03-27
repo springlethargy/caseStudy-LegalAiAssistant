@@ -74,7 +74,7 @@ export default function Home() {
     <div className="flex flex-col h-screen">
       <header className="border-b p-4 flex items-center justify-between bg-background sticky top-0 z-10">
         <div className="flex items-center">
-          <h1 className="text-xl font-bold text-primary">Ask UCASS</h1>
+          <h1 className="text-xl font-bold text-primary">社问</h1>
         </div>
         <div className="flex items-center gap-2">
           <Button
