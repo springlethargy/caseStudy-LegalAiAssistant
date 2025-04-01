@@ -38,16 +38,6 @@ export function SettingsDialog() {
 
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="font-medium">语音反馈</h4>
-              <p className="text-sm text-muted-foreground">
-                启用回答的语音朗读功能
-              </p>
-            </div>
-            <Switch id="voice-feedback" />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div>
               <h4 className="font-medium">自动保存对话</h4>
               <p className="text-sm text-muted-foreground">
                 自动保存所有对话历史
