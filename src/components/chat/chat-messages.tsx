@@ -16,21 +16,23 @@ export default function ChatMessages({
   return (
     <div className="space-y-6">
       {messages.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12">
-          <div className="p-4 mb-4 select-none">
-            <Image
-              className="hidden"
-              draggable={false}
-              width={400}
-              height={450}
-              src={"/ucass_logo.png"}
-              alt="The ucass logo"
-            />
+        <div className="group relative">
+          <div className="flex items-start gap-4 max-w-3xl mx-auto">
+            <span className="relative flex size-8 shrink-0 overflow-hidden rounded-full h-8 w-8 mt-1">
+              <div className="flex h-full w-full items-center justify-center rounded-full bg-primary text-primary-foreground">
+                U
+              </div>
+            </span>
+            <div className="flex-1">
+              <div className="text-sm font-medium mb-1">社答</div>
+              <div className="prose prose-sm dark:prose-invert">
+                <h3 className="text-lg font-medium mb-1">欢迎使用社问</h3>
+                <p className="text-sm text-muted-foreground">
+                  有任何关于社科大的问题，请在下方输入框中提问
+                </p>
+              </div>
+            </div>
           </div>
-          <h3 className="text-lg font-medium mb-1">欢迎使用社问</h3>
-          <p className="text-sm text-muted-foreground text-center max-w-sm">
-            有任何关于社科大的问题，请在下方输入框中提问
-          </p>
         </div>
       ) : (
         messages.map((message) => (
