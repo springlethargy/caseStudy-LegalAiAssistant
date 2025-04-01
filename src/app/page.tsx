@@ -5,40 +5,58 @@ import ChatMessages from "@/components/chat/chat-messages";
 import ChatInput from "@/components/chat/chat-input";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Trash2 } from "lucide-react";
 import { HistoryDialog } from "@/components/chat/history-dialog";
 import { SettingsDialog } from "@/components/chat/settings-dialog";
-
-export type Message = {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-};
+import { useChatStore, Message as ChatMessage } from "@/lib/chat-store";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function Home() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const {
+    chats,
+    currentChatId,
+    setCurrentChatId,
+    addChat,
+    addMessage,
+    getCurrentChat,
+    clearMessages,
+  } = useChatStore();
+
+  const currentChat = getCurrentChat();
+  const messages = currentChat?.messages || [];
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Create a new chat if there's no current chat
+  useEffect(() => {
+    if (chats.length === 0) {
+      addChat();
+    } else if (!currentChatId && chats.length > 0) {
+      setCurrentChatId(chats[0].id);
+    }
+  }, [chats, currentChatId, addChat, setCurrentChatId]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Function to add a new message
-  const addMessage = (role: "user" | "assistant", content: string) => {
-    setMessages((prev) => [
-      ...prev,
-      { id: Date.now().toString(), role, content },
-    ]);
-  };
-
   // Function to handle user message submission
   const handleSendMessage = async (message: string) => {
-    if (!message.trim()) return;
+    if (!message.trim() || !currentChatId) return;
 
     // Add user message
-    addMessage("user", message);
+    addMessage(currentChatId, "user", message);
 
     // Show loading state
     setIsLoading(true);
@@ -56,10 +74,14 @@ export default function Home() {
       }
 
       const data = await response.json();
-      addMessage("assistant", data.message);
+      addMessage(currentChatId, "assistant", data.message);
     } catch (error) {
       console.error("Error sending message:", error);
-      addMessage("assistant", "抱歉，我遇到了一个错误。请再试一次。");
+      addMessage(
+        currentChatId,
+        "assistant",
+        "抱歉，我遇到了一个错误。请再试一次。"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -67,7 +89,14 @@ export default function Home() {
 
   // Handle new chat
   const handleNewChat = () => {
-    setMessages([]);
+    addChat();
+  };
+
+  // Handle clear chat
+  const handleClearChat = () => {
+    if (currentChatId) {
+      clearMessages(currentChatId);
+    }
   };
 
   return (
@@ -78,15 +107,46 @@ export default function Home() {
         </div>
         <div className="flex items-center gap-2">
           <Button
-            variant="ghost"
-            size="icon"
+            variant="outline"
+            size="sm"
             onClick={handleNewChat}
             title="新对话"
+            className="flex items-center gap-1"
           >
-            <PlusCircle className="h-5 w-5" />
+            <PlusCircle className="h-4 w-4" />
+            <span>新对话</span>
           </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                title="清空对话"
+                disabled={
+                  !currentChatId || (currentChat?.messages.length || 0) === 0
+                }
+              >
+                <Trash2 className="h-5 w-5" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>确认清空对话</AlertDialogTitle>
+                <AlertDialogDescription>
+                  此操作将删除当前对话中的所有消息，但保留对话本身。此操作不可撤消。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>取消</AlertDialogCancel>
+                <AlertDialogAction onClick={handleClearChat}>
+                  确认
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <HistoryDialog />
           <SettingsDialog />
+          <ThemeToggle />
         </div>
       </header>
       <div className="flex-1 overflow-y-auto p-4 max-w-4xl mx-auto w-full">

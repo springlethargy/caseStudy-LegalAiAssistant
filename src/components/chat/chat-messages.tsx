@@ -1,4 +1,4 @@
-import { Message } from "@/app/page";
+import { Message } from "@/lib/chat-store";
 import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -18,7 +18,14 @@ export default function ChatMessages({
       {messages.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12">
           <div className="p-4 mb-4 select-none">
-            <Image className="hidden" draggable={false} width={400} height={450} src={'/ucass_logo.png'} alt="The ucass logo"/>
+            <Image
+              className="hidden"
+              draggable={false}
+              width={400}
+              height={450}
+              src={"/ucass_logo.png"}
+              alt="The ucass logo"
+            />
           </div>
           <h3 className="text-lg font-medium mb-1">欢迎使用社问</h3>
           <p className="text-sm text-muted-foreground text-center max-w-sm">

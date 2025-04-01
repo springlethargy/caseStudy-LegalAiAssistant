@@ -8,63 +8,144 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { History } from "lucide-react";
-
-// Demo chat history
-const demoHistory = [
-  {
-    id: "history-1",
-    title: "UCASS政策与指南",
-    date: "2023-10-15",
-    preview: "我需要了解学校的政策...",
-  },
-  {
-    id: "history-2",
-    title: "学生注册流程",
-    date: "2023-10-18",
-    preview: "如何注册新学期的课程？",
-  },
-  {
-    id: "history-3",
-    title: "校园资源与设施",
-    date: "2023-10-20",
-    preview: "图书馆开放时间是什么时候？",
-  },
-];
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { History, Trash2 } from "lucide-react";
+import { useChatStore } from "@/lib/chat-store";
+import { format } from "date-fns";
+import { useState } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export function HistoryDialog() {
+  const { chats, setCurrentChatId, deleteChat } = useChatStore();
+  const [open, setOpen] = useState(false);
+  const [chatToDelete, setChatToDelete] = useState<string | null>(null);
+
+  // Sort chats by updatedAt (newest first)
+  const sortedChats = [...chats].sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  );
+
+  const handleSelectChat = (id: string) => {
+    setCurrentChatId(id);
+    setOpen(false);
+  };
+
+  const handleConfirmDelete = () => {
+    if (chatToDelete) {
+      deleteChat(chatToDelete);
+      setChatToDelete(null);
+    }
+  };
+
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" title="历史记录">
-          <History className="h-5 w-5" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>历史对话</DialogTitle>
-        </DialogHeader>
-        <div className="py-4">
-          <div className="space-y-2">
-            {demoHistory.map((item) => (
-              <div
-                key={item.id}
-                className="flex flex-col space-y-1 rounded-lg border p-3 hover:bg-muted/50 cursor-pointer"
-              >
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium">{item.title}</h4>
-                  <span className="text-xs text-muted-foreground">
-                    {item.date}
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground line-clamp-1">
-                  {item.preview}
-                </p>
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button variant="ghost" size="icon" title="历史记录">
+            <History className="h-5 w-5" />
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>历史对话</DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            {sortedChats.length === 0 ? (
+              <div className="text-center p-4 text-muted-foreground">
+                没有聊天记录
               </div>
-            ))}
+            ) : (
+              <ScrollArea className="h-[400px] pr-4">
+                <div className="space-y-2">
+                  {sortedChats.map((chat) => {
+                    // Get the first user message as preview
+                    const previewMessage = chat.messages.find(
+                      (m) => m.role === "user"
+                    );
+                    const preview = previewMessage?.content || "无内容";
+
+                    // Get conversation length info
+                    const messageCount = chat.messages.length;
+                    const lastUpdated = format(
+                      new Date(chat.updatedAt),
+                      "yyyy-MM-dd HH:mm"
+                    );
+
+                    return (
+                      <div
+                        key={chat.id}
+                        className="relative group flex flex-col space-y-1 rounded-lg border p-3 hover:bg-muted/50"
+                      >
+                        <div
+                          className="flex items-center justify-between cursor-pointer"
+                          onClick={() => handleSelectChat(chat.id)}
+                        >
+                          <h4 className="font-medium">{chat.title}</h4>
+                          <span className="text-xs text-muted-foreground">
+                            {lastUpdated}
+                          </span>
+                        </div>
+                        <p
+                          className="text-sm text-muted-foreground line-clamp-2 cursor-pointer"
+                          onClick={() => handleSelectChat(chat.id)}
+                        >
+                          {preview}
+                        </p>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-muted-foreground">
+                            {messageCount} 条消息
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setChatToDelete(chat.id);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            )}
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={!!chatToDelete}
+        onOpenChange={(isOpen) => !isOpen && setChatToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              确定要删除这个对话吗？此操作无法撤销。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete}>
+              确认删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
