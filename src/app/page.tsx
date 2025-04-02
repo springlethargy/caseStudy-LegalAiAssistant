@@ -30,6 +30,7 @@ export default function Home() {
     addMessage,
     getCurrentChat,
     clearMessages,
+    updateMessageContent,
   } = useChatStore();
 
   const currentChat = getCurrentChat();
@@ -62,7 +63,16 @@ export default function Home() {
     setIsLoading(true);
 
     try {
-      // Call the API
+      // Add an empty assistant message that will be updated incrementally
+      addMessage(currentChatId, "assistant", "");
+
+      // Get the current chat to find the index of the last message
+      const chat = getCurrentChat();
+      if (!chat) throw new Error("Current chat not found");
+
+      const assistantMessageIndex = chat.messages.length - 1;
+
+      // Call the API with streaming
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -73,8 +83,31 @@ export default function Home() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      addMessage(currentChatId, "assistant", data.message);
+      if (!response.body) {
+        throw new Error("Response body is null");
+      }
+
+      // Set up the reader for the stream
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulatedContent = "";
+
+      // Read and process the stream
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        // Decode and accumulate the chunk
+        const chunk = decoder.decode(value, { stream: true });
+        accumulatedContent += chunk;
+
+        // Update the assistant message content
+        updateMessageContent(
+          currentChatId,
+          assistantMessageIndex,
+          accumulatedContent
+        );
+      }
     } catch (error) {
       console.error("Error sending message:", error);
       addMessage(

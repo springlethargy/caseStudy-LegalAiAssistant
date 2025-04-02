@@ -29,6 +29,11 @@ interface ChatStore {
     content: string
   ) => void;
   clearMessages: (chatId: string) => void;
+  updateMessageContent: (
+    chatId: string,
+    messageIndex: number,
+    content: string
+  ) => void;
 }
 
 export const useChatStore = create<ChatStore>()(
@@ -133,6 +138,26 @@ export const useChatStore = create<ChatStore>()(
                 }
               : chat
           ),
+        }));
+      },
+
+      updateMessageContent: (chatId, messageIndex, content) => {
+        set((state) => ({
+          chats: state.chats.map((chat) => {
+            if (chat.id !== chatId) return chat;
+
+            const newMessages = [...chat.messages];
+            newMessages[messageIndex] = {
+              ...newMessages[messageIndex],
+              content,
+            };
+
+            return {
+              ...chat,
+              messages: newMessages,
+              updatedAt: new Date(),
+            };
+          }),
         }));
       },
     }),

@@ -5,26 +5,48 @@ export async function POST(request: Request) {
   try {
     const { message } = await request.json();
 
-    // Use OpenAI client to generate a response
-    const response = await openai.chat.completions.create({
-      model: getModelName(),
-      messages: [
-        {
-          role: "system",
-          content:
-            "你是中国社会科学院大学(UCASS)的智能助手，你可以回答关于学校的各种问题。请用中文回复。",
-        },
-        { role: "user", content: message },
-      ],
-      temperature: 0.7,
-      max_tokens: 1000,
+    // Create a new ReadableStream to stream the response
+    const stream = new ReadableStream({
+      async start(controller) {
+        // Create streaming completion
+        const streamingResponse = await openai.chat.completions.create({
+          model: getModelName(),
+          messages: [
+            {
+              role: "system",
+              content:
+                "你是中国社会科学院大学(UCASS)的智能助手，你可以回答关于学校的各种问题。但如果是你不知道的问题，请不要回答。请用中文回复。",
+            },
+            { role: "user", content: message },
+          ],
+          temperature: 0.2,
+          max_tokens: 1000,
+          stream: true,
+        });
+
+        // Process the streaming response
+        for await (const chunk of streamingResponse) {
+          const content = chunk.choices[0]?.delta?.content || "";
+          if (content) {
+            // Encode and send the content chunk
+            const encodedChunk = new TextEncoder().encode(content);
+            controller.enqueue(encodedChunk);
+          }
+        }
+        controller.close();
+      },
+      cancel() {
+        // Handle cancellation if needed
+      },
     });
 
-    // Extract the response from the API result
-    const aiMessage =
-      response.choices[0]?.message?.content || "抱歉，我无法处理您的请求。";
-
-    return NextResponse.json({ message: aiMessage });
+    // Return the stream as the response
+    return new NextResponse(stream, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Transfer-Encoding": "chunked",
+      },
+    });
   } catch (error) {
     console.error("Error in chat API:", error);
     return NextResponse.json(

@@ -3,6 +3,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from 'react-markdown'
+import { Progress } from "../ui/progress";
 
 interface ChatMessagesProps {
   messages: Message[];
@@ -68,17 +69,10 @@ export default function ChatMessages({
       {isLoading && (
         <div className="relative">
           <div className="flex items-start gap-4 max-w-3xl mx-auto">
-            <Avatar className="h-8 w-8 mt-1">
-              <div className="flex h-full w-full items-center justify-center rounded-full bg-primary text-primary-foreground">
-                U
-              </div>
-            </Avatar>
             <div className="flex-1">
-              <div className="text-sm font-medium mb-1">社答</div>
               <div className="space-y-2">
-                <Skeleton className="h-4 w-[200px]" />
-                <Skeleton className="h-4 w-[300px]" />
-                <Skeleton className="h-4 w-[250px]" />
+                <Skeleton className="h-4" />
+                <Skeleton className="h-4" />
               </div>
             </div>
           </div>
