@@ -3,7 +3,6 @@ export const createSession = (): Promise<string> => {
     const body = {
         name: crypto.randomUUID(),
     };
-
     return fetch(url, {
         method: "POST",
         headers: {
@@ -13,7 +12,7 @@ export const createSession = (): Promise<string> => {
         body: JSON.stringify(body),
     })
         .then((response) => response.json())
-        .then((r) => r.id)
+        .then((r) => r.data.id)
         .catch((error) => {
             console.error("Error creating session:", error);
             throw error;
