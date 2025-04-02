@@ -2,7 +2,7 @@ import { Message } from "@/lib/chat-store";
 import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import Image from "next/image";
+import ReactMarkdown from 'react-markdown'
 
 interface ChatMessagesProps {
   messages: Message[];
@@ -54,9 +54,11 @@ export default function ChatMessages({
                 <div className="text-sm font-medium mb-1">
                   {message.role === "assistant" ? "社答" : "我"}
                 </div>
-                <div className="prose prose-sm dark:prose-invert">
-                  {message.content}
-                </div>
+                <article className="prose prose-slate prose-sm dark:prose-invert">
+                  <ReactMarkdown>
+                    {message.content}
+                  </ReactMarkdown>
+                </article>
               </div>
             </div>
           </div>
