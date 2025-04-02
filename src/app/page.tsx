@@ -66,10 +66,17 @@ export default function Home() {
       // Add an empty assistant message that will be updated incrementally
       addMessage(currentChatId, "assistant", "");
 
-      // Get the current chat to find the index of the last message
+      // Get the current chat to find the last message
       const chat = getCurrentChat();
       if (!chat) throw new Error("Current chat not found");
 
+      // Get the last message which is the assistant message we just added
+      const lastMessage = chat.messages[chat.messages.length - 1];
+      if (!lastMessage || lastMessage.role !== "assistant") {
+        throw new Error("Failed to find assistant message");
+      }
+
+      // Remember the message position for updates
       const assistantMessageIndex = chat.messages.length - 1;
 
       // Call the API with streaming
@@ -102,11 +109,18 @@ export default function Home() {
         accumulatedContent += chunk;
 
         // Update the assistant message content
-        updateMessageContent(
-          currentChatId,
-          assistantMessageIndex,
-          accumulatedContent
-        );
+        // We get an updated reference to the chat after each update
+        const currentChat = getCurrentChat();
+        if (
+          currentChat &&
+          currentChat.messages.length > assistantMessageIndex
+        ) {
+          updateMessageContent(
+            currentChatId,
+            assistantMessageIndex,
+            accumulatedContent
+          );
+        }
       }
     } catch (error) {
       console.error("Error sending message:", error);

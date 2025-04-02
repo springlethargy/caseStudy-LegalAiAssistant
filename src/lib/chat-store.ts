@@ -98,33 +98,40 @@ export const useChatStore = create<ChatStore>()(
       },
 
       addMessage: (chatId, role, content) => {
-        set((state) => ({
-          chats: state.chats.map((chat) => {
-            if (chat.id !== chatId) return chat;
+        set((state) => {
+          // Generate a unique ID that includes a random component
+          const uniqueId = `${Date.now()}-${Math.random()
+            .toString(36)
+            .substring(2, 9)}`;
 
-            const newMessage = {
-              id: Date.now().toString(),
-              role,
-              content,
-            };
+          return {
+            chats: state.chats.map((chat) => {
+              if (chat.id !== chatId) return chat;
 
-            // If this is the first user message, update the title
-            let title = chat.title;
-            if (role === "user" && chat.messages.length === 0) {
-              title =
-                content.length > 30
-                  ? content.substring(0, 30) + "..."
-                  : content;
-            }
+              const newMessage = {
+                id: uniqueId,
+                role,
+                content,
+              };
 
-            return {
-              ...chat,
-              title,
-              messages: [...chat.messages, newMessage],
-              updatedAt: new Date(),
-            };
-          }),
-        }));
+              // If this is the first user message, update the title
+              let title = chat.title;
+              if (role === "user" && chat.messages.length === 0) {
+                title =
+                  content.length > 30
+                    ? content.substring(0, 30) + "..."
+                    : content;
+              }
+
+              return {
+                ...chat,
+                title,
+                messages: [...chat.messages, newMessage],
+                updatedAt: new Date(),
+              };
+            }),
+          };
+        });
       },
 
       clearMessages: (chatId) => {
