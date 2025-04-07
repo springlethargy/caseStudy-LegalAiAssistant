@@ -119,7 +119,7 @@ export const useChatStore = create<ChatStore>()(
               if (role === "user" && chat.messages.length === 0) {
                 title =
                   content.length > 30
-                    ? content.substring(0, 30) + "..."
+                    ? `${content.substring(0, 30)}...`
                     : content;
               }
 
