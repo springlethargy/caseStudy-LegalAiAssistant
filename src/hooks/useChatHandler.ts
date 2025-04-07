@@ -46,34 +46,22 @@ export function useChat() {
 			while (true) {
 				const { done, value } = await reader.read();
 				if (done) break;
-				const decoded = decoder
+				const lines = decoder
 					.decode(value)
 					.trim()
 					.split("\n")
-					.filter((line) => line.trim() !== "")[0];
-
-                console.log(decoded)
-				if (decoded.startsWith("data:")) {
-					const json = JSON.parse(decoded.substring(5));
-					if (json.event !== "message") {
-						continue;
-					}
-
-					contentChunk += json.answer;
-					const currentChatState = getCurrentChat();
-					if (
-						currentChatState &&
-						currentChatState.messages.length > assistantMessageIndex
-					) {
+					.filter((s) => s.trim() !== "");
+				for (const decoded of lines) {
+					try {
+						contentChunk += decoded;
 						updateMessageContent(
 							currentChatId,
 							assistantMessageIndex,
 							contentChunk,
 						);
-					} else {
-						console.warn(
-							"Chat state inconsistent during stream update. Skipping update for chunk.",
-						);
+					} catch {
+						console.error("======HERE IS YOUR ERROR=======");
+						console.error(decoded);
 					}
 				}
 			}

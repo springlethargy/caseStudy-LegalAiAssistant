@@ -57,10 +57,3 @@ export async function* yieldChatflow(
 		}
 	}
 }
-
-const generator = yieldChatflow("hi");
-let next = await generator.next();
-while (!next.done) {
-	console.log(next.value);
-	next = await generator.next();
-}
