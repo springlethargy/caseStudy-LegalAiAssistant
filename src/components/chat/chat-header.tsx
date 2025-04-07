@@ -70,7 +70,6 @@ export function ChatHeader({
                 </AlertDialog>
                 <HistoryDialog />
                 <SettingsDialog />
-                <ThemeToggle />
             </div>
         </header>
     );
