@@ -28,3 +28,39 @@ export const executeChatflow = (
 		return response;
 	});
 };
+
+export async function* yieldChatflow(
+	question: string,
+	conversationId = "",
+	user: string = crypto.randomUUID(),
+) {
+	const stream = await executeChatflow(question, conversationId, user);
+	const reader = stream.body?.getReader();
+	if (!reader) throw new Error("Failed to get stream reader.");
+	const decoder = new TextDecoder();
+
+	while (true) {
+		const { value, done } = await reader.read();
+		if (done) {
+			return true;
+		}
+		const lines = decoder
+			.decode(value)
+			.trim()
+			.split("\n\n")
+			.filter((s) => s.trim() !== "");
+		for (let decoded of lines) {
+			if (decoded.startsWith("data:")) {
+				decoded = decoded.substring(5);
+				yield decoded;
+			}
+		}
+	}
+}
+
+const generator = yieldChatflow("hi");
+let next = await generator.next();
+while (!next.done) {
+	console.log(next.value);
+	next = await generator.next();
+}

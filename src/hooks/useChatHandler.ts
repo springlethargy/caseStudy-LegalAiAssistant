@@ -2,7 +2,13 @@ import { useState } from "react";
 import { useChatStore } from "@/lib/chat-store";
 
 async function streamChatResponse(message: string) {
-	return await fetch("/api/chat").then((r) => r.body);
+	return await fetch("/api/chat", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify({ message }),
+	}).then((r) => r.body);
 }
 
 export function useChat() {
@@ -40,7 +46,13 @@ export function useChat() {
 			while (true) {
 				const { done, value } = await reader.read();
 				if (done) break;
-				const decoded = decoder.decode(value).trim();
+				const decoded = decoder
+					.decode(value)
+					.trim()
+					.split("\n")
+					.filter((line) => line.trim() !== "")[0];
+
+                console.log(decoded)
 				if (decoded.startsWith("data:")) {
 					const json = JSON.parse(decoded.substring(5));
 					if (json.event !== "message") {
@@ -48,7 +60,6 @@ export function useChat() {
 					}
 
 					contentChunk += json.answer;
-                    console.log(contentChunk)
 					const currentChatState = getCurrentChat();
 					if (
 						currentChatState &&
