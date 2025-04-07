@@ -1,149 +1,110 @@
 import { useState } from "react";
 import { useChatStore } from "@/lib/chat-store";
 
-export function useChatHandler() {
-    const { addMessage, getCurrentChat, updateMessageContent } = useChatStore();
-    const [isLoading, setIsLoading] = useState(false);
+async function streamChatResponse(message: string) {
+	return await fetch("/api/chat").then((r) => r.body);
+}
 
-    const handleSendMessage = async (
-        message: string,
-        currentChatId: string | null
-    ) => {
-        if (!message.trim() || !currentChatId) return;
+export function useChat() {
+	const { addMessage, getCurrentChat, updateMessageContent } = useChatStore();
+	const [isLoading, setIsLoading] = useState(false);
 
-        addMessage(currentChatId, "user", message);
-        setIsLoading(true);
+	const handleSendMessage = async (
+		message: string,
+		currentChatId: string | null,
+	) => {
+		if (!message.trim() || !currentChatId) return;
 
-        try {
-            addMessage(currentChatId, "assistant", "");
+		addMessage(currentChatId, "user", message);
+		setIsLoading(true);
+		let assistantMessageIndex = -1;
 
-            const chat = getCurrentChat();
-            if (!chat) throw new Error("Current chat not found");
+		try {
+			// Add initial empty assistant message
+			addMessage(currentChatId, "assistant", "");
+			const chat = getCurrentChat(); // Get chat *after* adding the message
+			if (!chat) {
+				console.error(
+					"Failed to get current chat after adding assistant message placeholder.",
+				);
+				throw new Error("Current chat not found after update.");
+			}
+			assistantMessageIndex = chat.messages.length - 1; // Index of the newly added message
 
-            const lastMessage = chat.messages[chat.messages.length - 1];
-            if (!lastMessage || lastMessage.role !== "assistant") {
-                throw new Error("Failed to find assistant message");
-            }
+			const stream = await streamChatResponse(message);
+			const reader = stream?.getReader();
+			if (!reader) throw new Error("Failed to get stream reader.");
+			const decoder = new TextDecoder("utf-8");
+			let contentChunk = "";
 
-            const assistantMessageIndex = chat.messages.length - 1;
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+				const decoded = decoder.decode(value).trim();
+				if (decoded.startsWith("data:")) {
+					const json = JSON.parse(decoded.substring(5));
+					if (json.event !== "message") {
+						continue;
+					}
 
-            const response = await fetch("/api/chat", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message }),
-            });
+					contentChunk += json.answer;
+                    console.log(contentChunk)
+					const currentChatState = getCurrentChat();
+					if (
+						currentChatState &&
+						currentChatState.messages.length > assistantMessageIndex
+					) {
+						updateMessageContent(
+							currentChatId,
+							assistantMessageIndex,
+							contentChunk,
+						);
+					} else {
+						console.warn(
+							"Chat state inconsistent during stream update. Skipping update for chunk.",
+						);
+					}
+				}
+			}
+		} catch (error) {
+			console.error("Error sending message or processing stream:", error);
+			const errorMessage =
+				error instanceof Error ? error.message : "An unknown error occurred.";
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+			// Attempt to update the existing message or add a new one if index is invalid
+			if (currentChatId && assistantMessageIndex !== -1) {
+				const chat = getCurrentChat();
+				// Check if the message still exists at the index
+				if (
+					chat &&
+					chat.messages.length > assistantMessageIndex &&
+					chat.messages[assistantMessageIndex].role === "assistant"
+				) {
+					updateMessageContent(
+						currentChatId,
+						assistantMessageIndex,
+						`抱歉，处理时遇到错误： ${errorMessage}`,
+					);
+				} else {
+					// If the original placeholder is gone for some reason, add a new error message
+					addMessage(
+						currentChatId,
+						"assistant",
+						`抱歉，获取回复时遇到错误： ${errorMessage}`,
+					);
+				}
+			} else if (currentChatId) {
+				// Fallback if we couldn't even add the initial placeholder
+				addMessage(
+					currentChatId,
+					"assistant",
+					`抱歉，发送消息时遇到错误： ${errorMessage}`,
+				);
+			}
+		} finally {
+			setIsLoading(false);
+		}
+	};
 
-            if (!response.body) {
-                throw new Error("Response body is null");
-            }
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let accumulatedContent = "";
-            let buffer = "";
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-
-                let boundary = buffer.indexOf("\n\n");
-                while (boundary !== -1) {
-                    const messageSegment = buffer.substring(0, boundary);
-                    buffer = buffer.substring(boundary + 2);
-
-                    const lines = messageSegment.split("\n");
-                    for (const line of lines) {
-                        if (line.startsWith("data:")) {
-                            const jsonString = line.substring(5).trim();
-                            if (jsonString) {
-                                try {
-                                    const chunk = JSON.parse(jsonString);
-                                    if (
-                                        chunk &&
-                                        chunk.data &&
-                                        typeof chunk.data.answer === "string"
-                                    ) {
-                                        accumulatedContent = chunk.data.answer;
-                                        const currentChat = getCurrentChat();
-                                        if (
-                                            currentChat &&
-                                            currentChat.messages.length >
-                                                assistantMessageIndex
-                                        ) {
-                                            updateMessageContent(
-                                                currentChatId,
-                                                assistantMessageIndex,
-                                                accumulatedContent
-                                            );
-                                        }
-                                    } else {
-                                        // console.warn("Received chunk with unexpected structure:", chunk);
-                                    }
-                                } catch (e) {
-                                    console.error(
-                                        "Failed to parse JSON chunk:",
-                                        jsonString,
-                                        e
-                                    );
-                                }
-                            }
-                        }
-                    }
-                    boundary = buffer.indexOf("\n\n");
-                }
-            }
-
-            // Process remaining buffer data
-            if (buffer.startsWith("data:")) {
-                const jsonString = buffer.substring(5).trim();
-                if (jsonString) {
-                    try {
-                        const chunk = JSON.parse(jsonString);
-                        if (
-                            chunk &&
-                            chunk.data &&
-                            typeof chunk.data.answer === "string"
-                        ) {
-                            accumulatedContent = chunk.data.answer;
-                            const currentChat = getCurrentChat();
-                            if (
-                                currentChat &&
-                                currentChat.messages.length >
-                                    assistantMessageIndex
-                            ) {
-                                updateMessageContent(
-                                    currentChatId,
-                                    assistantMessageIndex,
-                                    accumulatedContent
-                                );
-                            }
-                        }
-                    } catch (e) {
-                        console.error(
-                            "Failed to parse final JSON chunk:",
-                            jsonString,
-                            e
-                        );
-                    }
-                }
-            }
-        } catch (error) {
-            console.error("Error sending message:", error);
-            addMessage(
-                currentChatId,
-                "assistant",
-                "抱歉，我遇到了一个错误。请再试一次。"
-            );
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    return { handleSendMessage, isLoading };
+	return { handleSendMessage, isLoading };
 }
