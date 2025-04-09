@@ -10,10 +10,11 @@ export interface ChatRequest {
 
 export async function POST(
 	request: Request,
-	{ params }: { params: { id: string } },
+	{ params }: { params: Promise<{ id: string }> },
 ) {
 	try {
-		const localConversationId = params.id;
+		const localConversationId = await params;
+
 		const { message, userId } = (await request.json()) as ChatRequest;
 
 		// Use a readable stream to handle the streaming response
@@ -37,7 +38,7 @@ export async function POST(
 									type: "metadata",
 									totalTokens: event.data?.total_tokens,
 									elapsedTime: event.data?.elapsed_time,
-									conversationId: localConversationId,
+									conversationId: localConversationId.id,
 								})}\n`,
 							);
 						}
