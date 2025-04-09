@@ -108,20 +108,23 @@ export function useChat() {
 								break;
 
 							case "metadata":
-								if (response.conversationId) {
-									// Update chat with conversation ID for future messages
-									updateChatMetadata(chatId, {
-										conversationId: response.conversationId,
-										totalTokens: response.totalTokens,
-										elapsedTime: response.elapsedTime,
-									});
+								// Use the returned metadata but ensure we preserve our conversationId
+								updateChatMetadata(chatId, {
+									// Only update conversationId if it's the same as our current one
+									// This preserves our local conversationId mapping
+									conversationId:
+										response.conversationId === conversationId
+											? response.conversationId
+											: conversationId,
+									totalTokens: response.totalTokens,
+									elapsedTime: response.elapsedTime,
+								});
 
-									setStreamMetadata({
-										conversationId: response.conversationId,
-										totalTokens: response.totalTokens,
-										elapsedTime: response.elapsedTime,
-									});
-								}
+								setStreamMetadata({
+									conversationId,
+									totalTokens: response.totalTokens,
+									elapsedTime: response.elapsedTime,
+								});
 								break;
 
 							case "error":

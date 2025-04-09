@@ -8,7 +8,7 @@ export const executeChatflow = (
 		inputs: {},
 		query: question,
 		response_mode: "streaming",
-		conversation_id: conversationId,
+		conversation_id: "",
 		user: user,
 	};
 	return fetch(url, {
@@ -62,7 +62,7 @@ export async function* streamDifyEvents(
 	conversationId = "",
 	user: string = crypto.randomUUID(),
 ): AsyncGenerator<DifyEvent, boolean, unknown> {
-	const stream = await executeChatflow(question, conversationId, user);
+	const stream = await executeChatflow(question, "", user);
 	const reader = stream.body?.getReader();
 	if (!reader) throw new Error("Failed to get stream reader.");
 	const decoder = new TextDecoder();

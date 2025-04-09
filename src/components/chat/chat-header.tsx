@@ -58,36 +58,15 @@ export function ChatHeader({
                 <h1 className="text-xl font-bold text-primary">社问</h1>
             </div>
             <div className="flex items-center gap-2">
-                {hasMetadata && (
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <Info className="h-4 w-4" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <div className="text-xs">
-                                    {metadata?.totalTokens && (
-                                        <div>使用的令牌: {metadata.totalTokens}</div>
-                                    )}
-                                    {metadata?.elapsedTime && (
-                                        <div>处理时间: {metadata.elapsedTime.toFixed(2)}s</div>
-                                    )}
-                                </div>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                )}
                 <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={handleNewChat}
                     title="新对话"
                     className="flex items-center gap-1"
                 >
                     <PlusCircle className="h-4 w-4" />
-                    <span>新对话</span>
+                    
                 </Button>
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -117,7 +96,6 @@ export function ChatHeader({
                 </AlertDialog>
                 <HistoryDialog />
                 <SettingsDialog />
-                <ThemeToggle />
             </div>
         </header>
     );

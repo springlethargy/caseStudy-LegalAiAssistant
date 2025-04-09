@@ -13,7 +13,7 @@ export async function POST(
 	{ params }: { params: { id: string } },
 ) {
 	try {
-		const conversationId = params.id;
+		const localConversationId = params.id;
 		const { message, userId } = (await request.json()) as ChatRequest;
 
 		// Use a readable stream to handle the streaming response
@@ -21,11 +21,7 @@ export async function POST(
 			async start(controller) {
 				try {
 					// Use the streamDifyEvents function to get parsed events
-					for await (const event of streamDifyEvents(
-						message,
-						conversationId,
-						userId,
-					)) {
+					for await (const event of streamDifyEvents(message, "", userId)) {
 						if (event.event === "message" && event.answer) {
 							// For message events, send only the answer chunks
 							controller.enqueue(
@@ -35,13 +31,13 @@ export async function POST(
 								})}\n`,
 							);
 						} else if (event.event === "workflow_finished") {
-							// Send metadata about the completion
+							// Send metadata about the completion but preserve our local conversationId
 							controller.enqueue(
 								`${JSON.stringify({
 									type: "metadata",
 									totalTokens: event.data?.total_tokens,
 									elapsedTime: event.data?.elapsed_time,
-									conversationId: event.conversation_id,
+									conversationId: localConversationId,
 								})}\n`,
 							);
 						}
