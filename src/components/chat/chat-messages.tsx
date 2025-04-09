@@ -19,11 +19,11 @@ export default function ChatMessages({
       {messages.length === 0 ? (
         <div className="group relative">
           <div className="flex items-start gap-4 max-w-3xl mx-auto">
-            <span className="relative flex size-8 shrink-0 overflow-hidden rounded-full h-8 w-8 mt-1">
+            <Avatar className={cn("h-8 w-8 mt-1")}>
               <div className="flex h-full w-full items-center justify-center rounded-full bg-primary text-primary-foreground">
                 U
               </div>
-            </span>
+            </Avatar>
             <div className="flex-1">
               <div className="text-sm font-medium mb-1">社答</div>
               <div className="prose prose-sm dark:prose-invert">
