@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useChatStore } from "@/lib/chat-store";
+import { v4 as uuidv4 } from "uuid";
 
 interface StreamResponse {
 	type: "content" | "metadata" | "error" | "done";
@@ -10,15 +11,14 @@ interface StreamResponse {
 	elapsedTime?: number;
 }
 
-async function streamChatResponse(message: string, conversationId = "") {
-	return await fetch("/api/chat", {
+async function streamChatResponse(message: string, conversationId: string) {
+	return await fetch(`/api/${conversationId}/chat`, {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
 		},
 		body: JSON.stringify({
 			message,
-			conversationId,
 		}),
 	}).then((r) => r.body);
 }
@@ -29,6 +29,7 @@ export function useChat() {
 		getCurrentChat,
 		updateMessageContent,
 		updateChatMetadata,
+		addChat,
 	} = useChatStore();
 	const [isLoading, setIsLoading] = useState(false);
 	const [streamMetadata, setStreamMetadata] = useState<{
@@ -41,20 +42,33 @@ export function useChat() {
 		message: string,
 		currentChatId: string | null,
 	) => {
-		if (!message.trim() || !currentChatId) return;
+		if (!message.trim()) return;
 
-		// Get current conversation ID if there is one
+		// Get current conversation ID or create a new one with UUID
 		const chat = getCurrentChat();
-		const currentConversationId = chat?.conversationId || "";
+		let chatId = currentChatId;
+		let conversationId = chat?.conversationId || uuidv4();
+
+		// If no current chat, create one
+		if (!chatId) {
+			chatId = addChat();
+		}
+
+		// Update the conversation with the UUID
+		if (chatId) {
+			updateChatMetadata(chatId, { conversationId });
+		}
+
+		if (!chatId) return;
 
 		// Add user message to chat
-		addMessage(currentChatId, "user", message);
+		addMessage(chatId, "user", message);
 		setIsLoading(true);
 		let assistantMessageIndex = -1;
 
 		try {
 			// Add initial empty assistant message
-			addMessage(currentChatId, "assistant", "");
+			addMessage(chatId, "assistant", "");
 			const updatedChat = getCurrentChat(); // Get chat after adding the message
 			if (!updatedChat) {
 				throw new Error("Current chat not found after update.");
@@ -62,7 +76,7 @@ export function useChat() {
 			assistantMessageIndex = updatedChat.messages.length - 1;
 
 			// Get streaming response
-			const stream = await streamChatResponse(message, currentConversationId);
+			const stream = await streamChatResponse(message, conversationId);
 			const reader = stream?.getReader();
 			if (!reader) throw new Error("Failed to get stream reader.");
 			const decoder = new TextDecoder("utf-8");
@@ -86,7 +100,7 @@ export function useChat() {
 								if (response.content) {
 									contentAccumulator += response.content;
 									updateMessageContent(
-										currentChatId,
+										chatId,
 										assistantMessageIndex,
 										contentAccumulator,
 									);
@@ -96,7 +110,7 @@ export function useChat() {
 							case "metadata":
 								if (response.conversationId) {
 									// Update chat with conversation ID for future messages
-									updateChatMetadata(currentChatId, {
+									updateChatMetadata(chatId, {
 										conversationId: response.conversationId,
 										totalTokens: response.totalTokens,
 										elapsedTime: response.elapsedTime,
@@ -129,16 +143,16 @@ export function useChat() {
 				error instanceof Error ? error.message : "An unknown error occurred.";
 
 			// Update the assistant message with error
-			if (currentChatId && assistantMessageIndex !== -1) {
+			if (chatId && assistantMessageIndex !== -1) {
 				updateMessageContent(
-					currentChatId,
+					chatId,
 					assistantMessageIndex,
 					`抱歉，处理时遇到错误： ${errorMessage}`,
 				);
-			} else if (currentChatId) {
+			} else if (chatId) {
 				// Fallback if we couldn't add the initial placeholder
 				addMessage(
-					currentChatId,
+					chatId,
 					"assistant",
 					`抱歉，发送消息时遇到错误： ${errorMessage}`,
 				);

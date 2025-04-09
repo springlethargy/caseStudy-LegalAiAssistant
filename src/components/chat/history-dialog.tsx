@@ -24,20 +24,27 @@ import { useChatStore } from "@/lib/chat-store";
 import { format } from "date-fns";
 import { useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useRouter } from "next/navigation";
 
 export function HistoryDialog() {
   const { chats, setCurrentChatId, deleteChat } = useChatStore();
   const [open, setOpen] = useState(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
+  const router = useRouter();
 
   // Sort chats by updatedAt (newest first)
   const sortedChats = [...chats].sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   );
 
-  const handleSelectChat = (id: string) => {
+  const handleSelectChat = (id: string, conversationId?: string) => {
     setCurrentChatId(id);
     setOpen(false);
+
+    // Navigate to the chat URL if conversation ID exists
+    if (conversationId) {
+      router.push(`/chat/${conversationId}`);
+    }
   };
 
   const handleConfirmDelete = () => {
@@ -88,7 +95,7 @@ export function HistoryDialog() {
                       >
                         <div
                           className="flex items-center justify-between cursor-pointer"
-                          onClick={() => handleSelectChat(chat.id)}
+                          onClick={() => handleSelectChat(chat.id, chat.conversationId)}
                         >
                           <h4 className="font-medium">{chat.title}</h4>
                           <span className="text-xs text-muted-foreground">
@@ -97,7 +104,7 @@ export function HistoryDialog() {
                         </div>
                         <p
                           className="text-sm text-muted-foreground line-clamp-2 cursor-pointer"
-                          onClick={() => handleSelectChat(chat.id)}
+                          onClick={() => handleSelectChat(chat.id, chat.conversationId)}
                         >
                           {preview}
                         </p>

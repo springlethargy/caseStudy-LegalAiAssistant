@@ -5,17 +5,16 @@ export const runtime = "edge";
 
 export interface ChatRequest {
 	message: string;
-	conversationId?: string;
 	userId?: string;
 }
 
-export async function POST(request: Request) {
+export async function POST(
+	request: Request,
+	{ params }: { params: { id: string } },
+) {
 	try {
-		const {
-			message,
-			conversationId = "",
-			userId,
-		} = (await request.json()) as ChatRequest;
+		const conversationId = params.id;
+		const { message, userId } = (await request.json()) as ChatRequest;
 
 		// Use a readable stream to handle the streaming response
 		const stream = new ReadableStream({

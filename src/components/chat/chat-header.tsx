@@ -20,6 +20,9 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useRouter } from "next/navigation";
+import { useChatStore } from "@/lib/chat-store";
+import { v4 as uuidv4 } from "uuid";
 
 interface ChatHeaderProps {
     onNewChat: () => void;
@@ -37,7 +40,17 @@ export function ChatHeader({
     isClearDisabled,
     metadata,
 }: ChatHeaderProps) {
+    const router = useRouter();
+    const { addChat, updateChatMetadata } = useChatStore();
     const hasMetadata = metadata?.totalTokens || metadata?.elapsedTime;
+
+    // Create a new chat with a new UUID and navigate to it
+    const handleNewChat = () => {
+        const newChatId = addChat();
+        const conversationId = uuidv4();
+        updateChatMetadata(newChatId, { conversationId });
+        router.push(`/chat/${conversationId}`);
+    };
 
     return (
         <header className="border-b p-4 flex items-center justify-between bg-background sticky top-0 z-10">
@@ -69,7 +82,7 @@ export function ChatHeader({
                 <Button
                     variant="outline"
                     size="sm"
-                    onClick={onNewChat}
+                    onClick={handleNewChat}
                     title="新对话"
                     className="flex items-center gap-1"
                 >
@@ -104,6 +117,7 @@ export function ChatHeader({
                 </AlertDialog>
                 <HistoryDialog />
                 <SettingsDialog />
+                <ThemeToggle />
             </div>
         </header>
     );
