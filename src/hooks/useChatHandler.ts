@@ -1,19 +1,41 @@
 import { useState } from "react";
 import { useChatStore } from "@/lib/chat-store";
 
-async function streamChatResponse(message: string) {
+interface StreamResponse {
+	type: "content" | "metadata" | "error" | "done";
+	content?: string;
+	error?: string;
+	conversationId?: string;
+	totalTokens?: number;
+	elapsedTime?: number;
+}
+
+async function streamChatResponse(message: string, conversationId = "") {
 	return await fetch("/api/chat", {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
 		},
-		body: JSON.stringify({ message }),
+		body: JSON.stringify({
+			message,
+			conversationId,
+		}),
 	}).then((r) => r.body);
 }
 
 export function useChat() {
-	const { addMessage, getCurrentChat, updateMessageContent } = useChatStore();
+	const {
+		addMessage,
+		getCurrentChat,
+		updateMessageContent,
+		updateChatMetadata,
+	} = useChatStore();
 	const [isLoading, setIsLoading] = useState(false);
+	const [streamMetadata, setStreamMetadata] = useState<{
+		totalTokens?: number;
+		elapsedTime?: number;
+		conversationId?: string;
+	}>({});
 
 	const handleSendMessage = async (
 		message: string,
@@ -21,6 +43,11 @@ export function useChat() {
 	) => {
 		if (!message.trim() || !currentChatId) return;
 
+		// Get current conversation ID if there is one
+		const chat = getCurrentChat();
+		const currentConversationId = chat?.conversationId || "";
+
+		// Add user message to chat
 		addMessage(currentChatId, "user", message);
 		setIsLoading(true);
 		let assistantMessageIndex = -1;
@@ -28,40 +55,71 @@ export function useChat() {
 		try {
 			// Add initial empty assistant message
 			addMessage(currentChatId, "assistant", "");
-			const chat = getCurrentChat(); // Get chat *after* adding the message
-			if (!chat) {
-				console.error(
-					"Failed to get current chat after adding assistant message placeholder.",
-				);
+			const updatedChat = getCurrentChat(); // Get chat after adding the message
+			if (!updatedChat) {
 				throw new Error("Current chat not found after update.");
 			}
-			assistantMessageIndex = chat.messages.length - 1; // Index of the newly added message
+			assistantMessageIndex = updatedChat.messages.length - 1;
 
-			const stream = await streamChatResponse(message);
+			// Get streaming response
+			const stream = await streamChatResponse(message, currentConversationId);
 			const reader = stream?.getReader();
 			if (!reader) throw new Error("Failed to get stream reader.");
 			const decoder = new TextDecoder("utf-8");
-			let contentChunk = "";
+			let contentAccumulator = "";
 
 			while (true) {
 				const { done, value } = await reader.read();
 				if (done) break;
+
 				const lines = decoder
-					.decode(value)
-					.trim()
+					.decode(value, { stream: true })
 					.split("\n")
-					.filter((s) => s.trim() !== "");
-				for (const decoded of lines) {
+					.filter((line) => line.trim() !== "");
+
+				for (const line of lines) {
 					try {
-						contentChunk += decoded;
-						updateMessageContent(
-							currentChatId,
-							assistantMessageIndex,
-							contentChunk,
-						);
-					} catch {
-						console.error("======HERE IS YOUR ERROR=======");
-						console.error(decoded);
+						const response = JSON.parse(line) as StreamResponse;
+
+						switch (response.type) {
+							case "content":
+								if (response.content) {
+									contentAccumulator += response.content;
+									updateMessageContent(
+										currentChatId,
+										assistantMessageIndex,
+										contentAccumulator,
+									);
+								}
+								break;
+
+							case "metadata":
+								if (response.conversationId) {
+									// Update chat with conversation ID for future messages
+									updateChatMetadata(currentChatId, {
+										conversationId: response.conversationId,
+										totalTokens: response.totalTokens,
+										elapsedTime: response.elapsedTime,
+									});
+
+									setStreamMetadata({
+										conversationId: response.conversationId,
+										totalTokens: response.totalTokens,
+										elapsedTime: response.elapsedTime,
+									});
+								}
+								break;
+
+							case "error":
+								throw new Error(response.error || "Unknown error in stream");
+
+							case "done":
+								// Stream is done, but we'll still let the reader.read() loop finish
+								break;
+						}
+					} catch (error) {
+						console.error("Error parsing stream response:", error, line);
+						// Continue processing other lines if one fails
 					}
 				}
 			}
@@ -70,30 +128,15 @@ export function useChat() {
 			const errorMessage =
 				error instanceof Error ? error.message : "An unknown error occurred.";
 
-			// Attempt to update the existing message or add a new one if index is invalid
+			// Update the assistant message with error
 			if (currentChatId && assistantMessageIndex !== -1) {
-				const chat = getCurrentChat();
-				// Check if the message still exists at the index
-				if (
-					chat &&
-					chat.messages.length > assistantMessageIndex &&
-					chat.messages[assistantMessageIndex].role === "assistant"
-				) {
-					updateMessageContent(
-						currentChatId,
-						assistantMessageIndex,
-						`抱歉，处理时遇到错误： ${errorMessage}`,
-					);
-				} else {
-					// If the original placeholder is gone for some reason, add a new error message
-					addMessage(
-						currentChatId,
-						"assistant",
-						`抱歉，获取回复时遇到错误： ${errorMessage}`,
-					);
-				}
+				updateMessageContent(
+					currentChatId,
+					assistantMessageIndex,
+					`抱歉，处理时遇到错误： ${errorMessage}`,
+				);
 			} else if (currentChatId) {
-				// Fallback if we couldn't even add the initial placeholder
+				// Fallback if we couldn't add the initial placeholder
 				addMessage(
 					currentChatId,
 					"assistant",
@@ -105,5 +148,9 @@ export function useChat() {
 		}
 	};
 
-	return { handleSendMessage, isLoading };
+	return {
+		handleSendMessage,
+		isLoading,
+		streamMetadata,
+	};
 }

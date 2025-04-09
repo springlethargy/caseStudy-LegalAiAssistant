@@ -17,7 +17,7 @@ export default function Home() {
 		clearMessages,
 	} = useChatStore();
 
-	const { handleSendMessage, isLoading } = useChat();
+	const { handleSendMessage, isLoading, streamMetadata } = useChat();
 
 	const currentChat = getCurrentChat();
 	const messages = currentChat?.messages || [];
@@ -59,6 +59,7 @@ export default function Home() {
 				onNewChat={handleNewChat}
 				onClearChat={handleClearChat}
 				isClearDisabled={isClearDisabled}
+				metadata={currentChat?.metadata}
 			/>
 			<div className="flex-1 overflow-y-auto p-4 max-w-4xl mx-auto w-full">
 				<ChatMessages messages={messages} isLoading={isLoading} />
@@ -72,6 +73,12 @@ export default function Home() {
 						}
 						isLoading={isLoading}
 					/>
+					{streamMetadata.totalTokens && (
+						<div className="text-xs text-muted-foreground mt-2 text-right">
+							Tokens: {streamMetadata.totalTokens} |
+							Time: {streamMetadata.elapsedTime?.toFixed(2)}s
+						</div>
+					)}
 				</div>
 			</div>
 		</div>

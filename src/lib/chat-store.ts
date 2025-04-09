@@ -13,6 +13,11 @@ export type Chat = {
 	messages: Message[];
 	createdAt: Date;
 	updatedAt: Date;
+	conversationId?: string;
+	metadata?: {
+		totalTokens?: number;
+		elapsedTime?: number;
+	};
 };
 
 interface ChatStore {
@@ -33,6 +38,14 @@ interface ChatStore {
 		chatId: string,
 		messageIndex: number,
 		content: string,
+	) => void;
+	updateChatMetadata: (
+		chatId: string,
+		metadata: {
+			conversationId?: string;
+			totalTokens?: number;
+			elapsedTime?: number;
+		},
 	) => void;
 }
 
@@ -73,6 +86,26 @@ export const useChatStore = create<ChatStore>()(
 							? {
 									...chat,
 									title,
+									updatedAt: new Date(),
+								}
+							: chat,
+					),
+				}));
+			},
+
+			updateChatMetadata: (id, metadata) => {
+				set((state) => ({
+					chats: state.chats.map((chat) =>
+						chat.id === id
+							? {
+									...chat,
+									conversationId:
+										metadata.conversationId || chat.conversationId,
+									metadata: {
+										...chat.metadata,
+										totalTokens: metadata.totalTokens,
+										elapsedTime: metadata.elapsedTime,
+									},
 									updatedAt: new Date(),
 								}
 							: chat,

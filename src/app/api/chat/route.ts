@@ -1,34 +1,75 @@
 import { NextResponse } from "next/server";
-import { executeChatflow, yieldChatflow } from "@/lib/dify";
+import { streamDifyEvents } from "@/lib/dify";
+
+export const runtime = "edge";
+
+export interface ChatRequest {
+	message: string;
+	conversationId?: string;
+	userId?: string;
+}
 
 export async function POST(request: Request) {
 	try {
-		const { message } = await request.json();
-		const streamingResponse = await yieldChatflow(message);
+		const {
+			message,
+			conversationId = "",
+			userId,
+		} = (await request.json()) as ChatRequest;
+
+		// Use a readable stream to handle the streaming response
 		const stream = new ReadableStream({
 			async start(controller) {
-				for await (const chunk of streamingResponse) {
-                    try {
-                        const json = JSON.parse(chunk)
-                        if (json.event === 'message') {
-                            controller.enqueue(`${json.answer}\n`);
-                        }
-                    }
-                    catch (e) {
-                        console.error(`========= The ERROR: ${e}`);
-                        console.error(`========= The CHUNK: ${chunk}`);
-                        throw e
-                    }
+				try {
+					// Use the streamDifyEvents function to get parsed events
+					for await (const event of streamDifyEvents(
+						message,
+						conversationId,
+						userId,
+					)) {
+						if (event.event === "message" && event.answer) {
+							// For message events, send only the answer chunks
+							controller.enqueue(
+								`${JSON.stringify({
+									type: "content",
+									content: event.answer,
+								})}\n`,
+							);
+						} else if (event.event === "workflow_finished") {
+							// Send metadata about the completion
+							controller.enqueue(
+								`${JSON.stringify({
+									type: "metadata",
+									totalTokens: event.data?.total_tokens,
+									elapsedTime: event.data?.elapsed_time,
+									conversationId: event.conversation_id,
+								})}\n`,
+							);
+						}
+					}
+
+					// Signal completion
+					controller.enqueue(`${JSON.stringify({ type: "done" })}\n`);
+					controller.close();
+				} catch (error) {
+					console.error("Error processing stream:", error);
+					controller.enqueue(
+						`${JSON.stringify({
+							type: "error",
+							error: error instanceof Error ? error.message : "Unknown error",
+						})}\n`,
+					);
+					controller.close();
 				}
-				controller.close();
 			},
 		});
 
-		// Return the stream as the response
+		// Return the stream with proper headers for SSE
 		return new NextResponse(stream, {
 			headers: {
 				"Content-Type": "text/event-stream; charset=utf-8",
-				"Transfer-Encoding": "chunked",
+				"Cache-Control": "no-cache, no-transform",
+				Connection: "keep-alive",
 			},
 		});
 	} catch (error) {

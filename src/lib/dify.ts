@@ -29,31 +29,103 @@ export const executeChatflow = (
 	});
 };
 
-export async function* yieldChatflow(
+// Interface for the Dify response events
+export interface DifyEvent {
+	event: string;
+	task_id?: string;
+	workflow_run_id?: string;
+	message_id?: string;
+	conversation_id?: string;
+	answer?: string;
+	created_at?: number;
+	data?: Record<string, unknown>;
+}
+
+/**
+ * Parses a Dify event string into a structured object
+ */
+export function parseDifyEvent(eventData: string): DifyEvent | null {
+	try {
+		if (eventData.trim() === "") return null;
+		return JSON.parse(eventData);
+	} catch (e) {
+		console.error("Failed to parse Dify event:", e, eventData);
+		return null;
+	}
+}
+
+/**
+ * Generator that yields parsed Dify events from a streaming response
+ */
+export async function* streamDifyEvents(
 	question: string,
 	conversationId = "",
 	user: string = crypto.randomUUID(),
-) {
+): AsyncGenerator<DifyEvent, boolean, unknown> {
 	const stream = await executeChatflow(question, conversationId, user);
 	const reader = stream.body?.getReader();
 	if (!reader) throw new Error("Failed to get stream reader.");
 	const decoder = new TextDecoder();
+	let buffer = "";
 
-	while (true) {
-		const { value, done } = await reader.read();
-		if (done) {
-			return true;
-		}
-		const lines = decoder
-			.decode(value)
-			.trim()
-			.split("\n\n")
-			.filter((s) => s.trim() !== "");
-		for (let decoded of lines) {
-			if (decoded.startsWith("data:")) {
-				decoded = decoded.substring(5);
-				yield decoded;
+	try {
+		while (true) {
+			const { value, done } = await reader.read();
+			if (done) return true;
+
+			// Add new data to buffer and process
+			buffer += decoder.decode(value, { stream: true });
+
+			// Extract complete SSE events (each starts with "data: ")
+			const events = buffer.split("\n\n");
+			buffer = events.pop() || ""; // Keep the last potentially incomplete event
+
+			for (const event of events) {
+				const trimmed = event.trim();
+				if (trimmed.startsWith("data: ")) {
+					const eventData = trimmed.substring(6); // Remove "data: " prefix
+					const parsedEvent = parseDifyEvent(eventData);
+					if (parsedEvent) {
+						yield parsedEvent;
+					}
+				}
 			}
 		}
+	} catch (error) {
+		console.error("Error in streamDifyEvents:", error);
+		throw error;
+	} finally {
+		reader.releaseLock();
 	}
+}
+
+/**
+ * Extracts only message content from the Dify streaming response
+ * Only yields the actual message content parts
+ */
+export async function* yieldChatflow(
+	question: string,
+	conversationId = "",
+	user: string = crypto.randomUUID(),
+): AsyncGenerator<string, boolean, unknown> {
+	let messageContent = "";
+	let currentConversationId = conversationId;
+
+	for await (const event of streamDifyEvents(
+		question,
+		currentConversationId,
+		user,
+	)) {
+		if (event.event === "message" && event.answer) {
+			messageContent += event.answer;
+			yield event.answer;
+		}
+
+		// Store conversation_id for future use if available
+		if (event.conversation_id && !currentConversationId) {
+			currentConversationId = event.conversation_id;
+		}
+	}
+
+	return true;
 }
