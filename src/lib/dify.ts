@@ -98,34 +98,3 @@ export async function* streamDifyEvents(
 		reader.releaseLock();
 	}
 }
-
-/**
- * Extracts only message content from the Dify streaming response
- * Only yields the actual message content parts
- */
-export async function* yieldChatflow(
-	question: string,
-	conversationId = "",
-	user: string = crypto.randomUUID(),
-): AsyncGenerator<string, boolean, unknown> {
-	let messageContent = "";
-	let currentConversationId = conversationId;
-
-	for await (const event of streamDifyEvents(
-		question,
-		currentConversationId,
-		user,
-	)) {
-		if (event.event === "message" && event.answer) {
-			messageContent += event.answer;
-			yield event.answer;
-		}
-
-		// Store conversation_id for future use if available
-		if (event.conversation_id && !currentConversationId) {
-			currentConversationId = event.conversation_id;
-		}
-	}
-
-	return true;
-}
