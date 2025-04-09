@@ -40,16 +40,15 @@ export default function ChatMessages({
           <div key={message.id} className={cn("group relative")}>
             <div className="flex items-start gap-4 max-w-3xl mx-auto">
               <Avatar className={cn("h-8 w-8 mt-1")}>
-                <div
-                  className={cn(
-                    "flex h-full w-full items-center justify-center rounded-full",
-                    message.role === "assistant"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted"
-                  )}
-                >
-                  {message.role === "assistant" ? "U" : "我"}
-                </div>
+                {message.role === "assistant" ? (
+                  <div className="flex h-full w-full items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    U
+                  </div>
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center rounded-full bg-muted">
+                    我
+                  </div>
+                )}
               </Avatar>
               <div className="flex-1">
                 <div className="text-sm font-medium mb-1">
