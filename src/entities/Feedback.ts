@@ -16,7 +16,7 @@ export class Feedback {
 	@Column({ type: "text", nullable: false })
 	response!: string;
 
-	@Column({ type: "integer", nullable: false })
+	@Column({ type: "float", nullable: false })
 	rate!: number;
 
 	@CreateDateColumn({ type: "datetime" })

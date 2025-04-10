@@ -57,9 +57,9 @@ export async function POST(request: NextRequest) {
 		}
 
 		// Validate rate value
-		if (typeof rate !== "number" || rate < 1 || rate > 5) {
+		if (typeof rate !== "number" || rate < 0 || rate > 10) {
 			return NextResponse.json(
-				{ error: "Rate must be a number between 1 and 5" },
+				{ error: "Rate must be a number between 0 and 10" },
 				{ status: 400 },
 			);
 		}

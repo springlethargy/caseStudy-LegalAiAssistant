@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from 'react-markdown'
 import { Progress } from "../ui/progress";
+import { FeedbackForm } from "./feedback-form";
 
 interface ChatMessagesProps {
   messages: Message[];
@@ -36,7 +37,7 @@ export default function ChatMessages({
           </div>
         </div>
       ) : (
-        messages.map((message) => (
+        messages.map((message, index) => (
           <div key={message.id} className={cn("group relative")}>
             <div className="flex items-start gap-4 max-w-3xl mx-auto">
               <Avatar className={cn("h-8 w-8 mt-1")}>
@@ -61,6 +62,18 @@ export default function ChatMessages({
                 </article>
               </div>
             </div>
+            {/* Position the feedback form below the assistant message with proper alignment.
+                The feedback form will appear with animation after the message loading is complete
+                and with a small delay to ensure a smooth user experience. */}
+            {message.role === "assistant" && (
+              <div className="mt-2 max-w-3xl mx-auto pl-12">
+                <FeedbackForm
+                  message={message}
+                  prevMessage={index > 0 ? messages[index - 1] : undefined}
+                  isLoading={isLoading}
+                />
+              </div>
+            )}
           </div>
         ))
       )}
