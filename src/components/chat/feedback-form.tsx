@@ -5,6 +5,7 @@ import { StarRating } from "@/components/ui/star-rating";
 import { Message } from "@/lib/chat-store";
 import { Card } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
+import { useParams } from "next/navigation";
 
 interface FeedbackFormProps {
     message: Message;
@@ -17,6 +18,8 @@ export function FeedbackForm({ message, prevMessage, isLoading }: FeedbackFormPr
     const [submitted, setSubmitted] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showFeedback, setShowFeedback] = useState(false);
+    const params = useParams();
+    const conversationId = params.id as string;
 
     // Delay showing the feedback form to make it appear after message
     useEffect(() => {
@@ -38,7 +41,7 @@ export function FeedbackForm({ message, prevMessage, isLoading }: FeedbackFormPr
         try {
             // Only submit if we have both the question and answer
             if (message.role === "assistant" && prevMessage?.role === "user") {
-                const response = await fetch("/api/feedback", {
+                const response = await fetch("/api/submit-feedback", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -47,6 +50,7 @@ export function FeedbackForm({ message, prevMessage, isLoading }: FeedbackFormPr
                         query: prevMessage.content,
                         response: message.content,
                         rate: value,
+                        id: conversationId
                     }),
                 });
 

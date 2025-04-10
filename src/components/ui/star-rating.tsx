@@ -4,11 +4,12 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Star, StarHalf } from "lucide-react";
 
-interface StarRatingProps extends React.HTMLAttributes<HTMLDivElement> {
+interface StarRatingProps {
     value: number;
     onChange?: (value: number) => void;
     maxRating?: number;
     count?: number;
+    className?: string;
 }
 
 export function StarRating({
@@ -18,7 +19,7 @@ export function StarRating({
     count = 5,
     className,
     ...props
-}: StarRatingProps) {
+}: StarRatingProps & Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'>) {
     const starsArray = Array.from({ length: count }, (_, i) => i + 1);
     const valuePerStar = maxRating / count;
     const [hoverValue, setHoverValue] = React.useState<number | null>(null);

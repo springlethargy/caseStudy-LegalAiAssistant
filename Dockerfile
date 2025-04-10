@@ -3,6 +3,9 @@ FROM oven/bun:latest as base
 # Set working directory
 WORKDIR /app
 
+# Copy environment variables first
+COPY .env* ./
+
 # Install dependencies
 COPY package.json ./
 RUN bun install
@@ -20,6 +23,9 @@ WORKDIR /app
 
 # Set environment variables
 ENV NODE_ENV=production
+
+# Copy environment variables
+COPY .env* ./
 
 # Copy built assets from base
 COPY --from=base /app/.next ./.next

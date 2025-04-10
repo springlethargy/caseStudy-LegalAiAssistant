@@ -22,7 +22,7 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # local env files
-.env
+# .env - Removed to allow .env file to be copied into the image
 .env*.local
 
 # git
