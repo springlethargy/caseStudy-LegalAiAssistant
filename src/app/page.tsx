@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useChatStore } from "@/lib/chat-store";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
+import Image from "next/image";
 
 export default function Home() {
 	const router = useRouter();
@@ -36,7 +37,15 @@ export default function Home() {
 
 	// Show a loading state while redirecting
 	return (
-		<div className="flex items-center justify-center h-screen">
+		<div className="flex flex-col items-center justify-center h-screen">
+			<Image
+				src="/main_logo.png"
+				alt="UCASS Logo"
+				width={300}
+				height={300}
+				className="mb-8"
+				priority
+			/>
 			<p className="text-lg">Loading chat...</p>
 		</div>
 	);

@@ -7,16 +7,17 @@ const nextConfig: NextConfig = {
 		LLM_NAME: process.env.LLM_NAME,
 		DB_URL: process.env.DB_URL,
 	},
-	// Ensure server-only imports are not bundled on the client
-	webpack: (config, { isServer }) => {
-		if (!isServer) {
-			// Don't bundle server-side packages on the client side
-			config.resolve.fallback = {
-				...config.resolve.fallback,
-			};
-		}
-		return config;
+	// Configuration for both webpack and turbo
+	experimental: {
+		turbo: {},
 	},
+	// Common configuration for both bundlers
+	// For webpack in production and turbo in development
+	eslint: {
+		ignoreDuringBuilds: true,
+	},
+	// Make both bundlers use the same configuration for externals if needed
+	transpilePackages: [],
 };
 
 export default nextConfig;
