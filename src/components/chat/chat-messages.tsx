@@ -43,26 +43,25 @@ export default function ChatMessages({
                 <div className="text-sm font-medium mb-1">
                   {message.role === "assistant" ? "社答" : "我"}
                 </div>
-                {message.content ? (
-                  <article className="prose prose-slate prose-sm dark:prose-invert">
-                    <ReactMarkdown>
-                      {message.content}
-                    </ReactMarkdown>
-                  </article>
-                ) : (
-                  <div className=" text-red-700 dark:text-red-400 rounded-md">
+                <article className="prose prose-slate prose-sm dark:prose-invert">
+                  <ReactMarkdown>
+                    {message.content}
+                  </ReactMarkdown>
+                </article>
+
+                {!message.content && !isLoading &&
+                  <div className="text-red-700 dark:text-red-400 rounded-md">
                     出现了一些错误：但是我也不知道为什么
-                  </div>
-                )}
+                  </div>}
                 {isLoading && index === messages.length - 1 && (
                   <div className="relative">
                     <div className="flex items-start gap-4 max-w-3xl mx-auto">
                       <div className="flex-1">
                         <div className="space-y-2">
-                          <Skeleton className="h-4" />
-                          <Skeleton className="h-4" />
-                          <Skeleton className="h-4" />
-                          <Skeleton className="h-4" />
+                          <Skeleton className="h-4 w-3/4" />
+                          <Skeleton className="h-4 w-2/3" />
+                          <Skeleton className="h-4 w-5/6" />
+                          <Skeleton className="h-4 w-1/2" />
                         </div>
                       </div>
                     </div>

@@ -18,6 +18,7 @@ const nextConfig: NextConfig = {
 	},
 	// Make both bundlers use the same configuration for externals if needed
 	transpilePackages: [],
+	devIndicators: false
 };
 
 export default nextConfig;
