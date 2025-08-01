@@ -1,43 +1,112 @@
-import Image from "next/image";
-import { Avatar } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
+"use client";
 
-export function EmptyChat() {
-    return (
-        <div className="flex flex-col items-center">
-            <div className="mb-12 mt-4">
-                <Image
-                    src="/main_logo.png"
-                    alt="UCASS Logo"
-                    width={240}
-                    height={240}
-                    priority
-                    className="mx-auto"
-                />
-            </div>
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BotMessageSquare } from "lucide-react";
 
-            <div className="w-full max-w-2xl bg-card rounded-lg p-6 shadow-sm">
-                <div className="flex items-start gap-4">
+// 定义这个组件需要接收的 props
+interface EmptyChatProps {
+	onStartChat: (
+		message: string,
+		questionType: string,
+		answer: string,
+		answer_idea: string
+	) => void;
+	isLoading: boolean;
+}
 
-                    <div className="flex-1">
-                        <h3 className="text-xl font-medium mb-3">欢迎使用社问</h3>
-                        <ul className="space-y-2 text-muted-foreground">
-                            <li className="flex items-start">
-                                <span className="mr-2">•</span>
-                                <span>这是一个关于中国社会科学院大学的智能问答助手</span>
-                            </li>
-                            <li className="flex items-start">
-                                <span className="mr-2">•</span>
-                                <span>你可以询问关于学校课程、校园生活、教学资源等问题</span>
-                            </li>
-                            <li className="flex items-start">
-                                <span className="mr-2">•</span>
-                                <span>请在下方输入框中输入你的问题</span>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-} 
+export function EmptyChat({ onStartChat, isLoading }: EmptyChatProps) {
+	// 使用 state 管理表单的各个输入值
+	const [questionType, setQuestionType] = useState("宪法");
+	const [userAnswer, setUserAnswer] = useState("");
+	const [userAnswerIdea, setUserAnswerIdea] = useState("");
+	const [message, setMessage] = useState("");
+
+	const handleStart = () => {
+		// 只有当主要案例描述（message）不为空时才启动
+		if (message.trim()) {
+			onStartChat(message, questionType, userAnswer, userAnswerIdea);
+		}
+	};
+
+	return (
+		<div className="flex items-center justify-center h-full">
+			<Card className="w-full max-w-2xl">
+				<CardHeader>
+					<CardTitle className="flex items-center gap-2">
+						<BotMessageSquare className="h-6 w-6" />
+						宪法案例鉴定式分析
+					</CardTitle>
+				</CardHeader>
+				<CardContent className="space-y-6">
+					<div className="space-y-2">
+						<Label>需进行哪个部门法的案例分析</Label>
+						<Select
+							name="question-type"
+							value={questionType}
+							onValueChange={setQuestionType}
+							disabled={isLoading}
+						>
+							<SelectTrigger>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="宪法">宪法</SelectItem>
+								<SelectItem value="民法" disabled>民法 (开发中)</SelectItem>
+								<SelectItem value="刑法" disabled>刑法 (开发中)</SelectItem>
+								<SelectItem value="行政法" disabled>行政法 (开发中)</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="main-message">案例描述 (必填)</Label>
+						<Textarea
+							id="main-message"
+							placeholder="请在此输入需要分析的案例..."
+							value={message}
+							onChange={(e) => setMessage(e.target.value)}
+							className="h-[120px] overflow-y-auto"
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="user-answer">您的答案 (选填)</Label>
+						<Textarea
+							id="user-answer"
+							placeholder="如果您希望AI评价您的答案，请在此输入..."
+							value={userAnswer}
+							onChange={(e) => setUserAnswer(e.target.value)}
+							className="h-[60px] overflow-y-auto"
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="user-idea">您的分析思路 (选填)</Label>
+						<Textarea
+							id="user-idea"
+							placeholder="您还可以提供您的分析思路..."
+							value={userAnswerIdea}
+							onChange={(e) => setUserAnswerIdea(e.target.value)}
+							className="h-[60px] overflow-y-auto"
+						/>
+					</div>
+					<Button
+						onClick={handleStart}
+						disabled={!message.trim() || isLoading}
+						className="w-full"
+					>
+						{isLoading ? "正在分析..." : "开始分析"}
+					</Button>
+				</CardContent>
+			</Card>
+		</div>
+	);
+}

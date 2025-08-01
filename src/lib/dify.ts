@@ -1,14 +1,23 @@
+// 修改：为 executeChatflow 增加 answer 和 answer_idea 可选参数
 export const executeChatflow = (
 	question: string,
 	conversationId = "",
 	user: string = crypto.randomUUID(),
+	question_type: string,
+	answer?: string,
+	answer_idea?: string,
 ): Promise<Response> => {
 	const url = `${process.env.DIFY_URL}/chat-messages`;
 	const body = {
-		inputs: {},
+		// 修改：将所有自定义变量放入 inputs 对象
+		inputs: {
+			question_type: question_type,
+			answer: answer || "",
+			answer_idea: answer_idea || "",
+		},
 		query: question,
 		response_mode: "streaming",
-		conversation_id: "",
+		conversation_id: conversationId, // 使用传入的 conversationId
 		user: user,
 	};
 	return fetch(url, {
@@ -20,9 +29,11 @@ export const executeChatflow = (
 		body: JSON.stringify(body),
 	}).then((response) => {
 		if (!response.ok) {
-			throw new Error(
-				`Failed to execute with status ${response.status} ${response.statusText}`,
-			);
+			return response.text().then(text => {
+				throw new Error(
+					`Failed to execute with status ${response.status} ${response.statusText}. Response: ${text}`
+				);
+			})
 		}
 
 		return response;
@@ -30,6 +41,7 @@ export const executeChatflow = (
 };
 
 // Interface for the Dify response events
+// 修改：为 DifyEvent 接口中的 data 字段提供更精确的类型定义
 export interface DifyEvent {
 	event: string;
 	task_id?: string;
@@ -38,7 +50,18 @@ export interface DifyEvent {
 	conversation_id?: string;
 	answer?: string;
 	created_at?: number;
-	data?: Record<string, unknown>;
+	data?: {
+		// 根据我们已知的 workflow_finished 事件结构来定义
+		outputs?: {
+			answer?: string; // 明确指出 outputs 中可能有 answer 字段
+			[key: string]: any; // 允许 outputs 中有其他字段
+		};
+		// 根据我们已知的 metadata 结构来定义
+		total_tokens?: number;
+		elapsed_time?: number;
+		// 允许 data 对象中有其他未预期的字段
+		[key: string]: any; 
+	};
 }
 
 /**
@@ -57,12 +80,24 @@ export function parseDifyEvent(eventData: string): DifyEvent | null {
 /**
  * Generator that yields parsed Dify events from a streaming response
  */
+// 修改：为 streamDifyEvents 增加 answer 和 answer_idea 可选参数
 export async function* streamDifyEvents(
 	question: string,
 	conversationId = "",
 	user: string = crypto.randomUUID(),
+	question_type: string,
+	answer?: string,
+    answer_idea?: string,
 ): AsyncGenerator<DifyEvent, boolean, unknown> {
-	const stream = await executeChatflow(question, "", user);
+	// 修改：传递所有参数
+	const stream = await executeChatflow(
+        question, 
+        conversationId, 
+        user, 
+        question_type,
+        answer,
+        answer_idea
+    );
 	const reader = stream.body?.getReader();
 	if (!reader) throw new Error("Failed to get stream reader.");
 	const decoder = new TextDecoder();

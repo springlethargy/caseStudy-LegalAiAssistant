@@ -14,6 +14,7 @@ export type Chat = {
 	createdAt: Date;
 	updatedAt: Date;
 	conversationId?: string;
+	questionType?: string; // 新增：用于存储当前对话的法律类型
 	metadata?: {
 		totalTokens?: number;
 		elapsedTime?: number;
@@ -46,6 +47,12 @@ interface ChatStore {
 			totalTokens?: number;
 			elapsedTime?: number;
 		},
+	) => void;
+	updateChatContext: ( // 修改：新增函数接口
+		chatId: string,
+		context: {
+			questionType?: string;
+		}
 	) => void;
 }
 
@@ -106,6 +113,21 @@ export const useChatStore = create<ChatStore>()(
 										totalTokens: metadata.totalTokens,
 										elapsedTime: metadata.elapsedTime,
 									},
+									updatedAt: new Date(),
+								}
+							: chat,
+					),
+				}));
+			},
+
+			// 新增：实现 updateChatContext 函数
+			updateChatContext: (id, context) => {
+				set((state) => ({
+					chats: state.chats.map((chat) =>
+						chat.id === id
+							? {
+									...chat,
+									questionType: context.questionType || chat.questionType,
 									updatedAt: new Date(),
 								}
 							: chat,

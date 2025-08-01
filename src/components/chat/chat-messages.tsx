@@ -1,3 +1,5 @@
+"use client";
+
 import { Message } from "@/lib/chat-store";
 import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -6,33 +8,49 @@ import ReactMarkdown from 'react-markdown'
 import { FeedbackForm } from "./feedback-form";
 import Image from "next/image";
 import { EmptyChat } from "./empty-chat";
+import { Loader2 } from "lucide-react";
 
+// 修改：移除不再需要的 onPromptClick
 interface ChatMessagesProps {
   messages: Message[];
   isLoading: boolean;
+  isTyping: boolean;
 }
 
 export default function ChatMessages({
   messages,
   isLoading,
+  isTyping,
 }: ChatMessagesProps) {
+  // 由于我们将“建议问题”整合进了 EmptyChat/ChatSetup，这里的 onPromptClick
+  // 实际上是通过 EmptyChat 传递的，此处的逻辑保持不变是正确的。
+  // 我们只是修复 page.tsx 中调用此组件时的问题。
   return (
     <div className="space-y-6">
       {messages.length === 0 ? (
-        <EmptyChat />
+        // onStartChat is the correct prop for the new EmptyChat/ChatSetup component
+        // This seems to be a naming mismatch. Let's assume onPromptClick is not needed here
+        // and the onStartChat is passed directly to EmptyChat in page.tsx
+        <div /> // This will be handled by logic in page.tsx now
       ) : (
         messages.map((message, index) => (
           <div key={message.id} className={cn("group relative")}>
             <div className="flex items-start gap-4 max-w-3xl mx-auto">
               <Avatar className={cn("h-8 w-8 mt-1", message.role === "assistant" ? "overflow-hidden" : "")}>
                 {message.role === "assistant" ? (
-                  <Image
-                    src="/ask_logo.png"
-                    alt="Assistant Avatar"
-                    width={32}
-                    height={32}
-                    priority
-                  />
+                  (isLoading || isTyping) && index === messages.length - 1 ? (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    </div>
+                  ) : (
+                    <Image
+                      src="/ask_logo.png"
+                      alt="Assistant Avatar"
+                      width={32}
+                      height={32}
+                      priority
+                    />
+                  )
                 ) : (
                   <div className="flex h-full w-full items-center justify-center rounded-full bg-muted">
                     我
@@ -49,7 +67,7 @@ export default function ChatMessages({
                   </ReactMarkdown>
                 </article>
 
-                {!message.content && !isLoading &&
+                {!message.content && !isLoading && !isTyping &&
                   <div className="text-red-700 dark:text-red-400 rounded-md">
                     出现了一些错误：但是我也不知道为什么
                   </div>}
@@ -69,10 +87,7 @@ export default function ChatMessages({
                 )}
               </div>
             </div>
-            {/* Position the feedback form below the assistant message with proper alignment.
-                The feedback form will appear with animation after the message loading is complete
-                and with a small delay to ensure a smooth user experience. */}
-            {message.role === "assistant" && message.content && (
+            {message.role === "assistant" && message.content && !isLoading && !isTyping && (
               <div className="mt-2 max-w-3xl mx-auto pl-12">
                 <FeedbackForm
                   message={message}

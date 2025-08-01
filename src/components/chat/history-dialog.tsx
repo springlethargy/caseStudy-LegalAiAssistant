@@ -56,32 +56,36 @@ export function HistoryDialog() {
 
   return (
     <>
+      {/* --- 修改：为DialogContent增加更健壮的布局 --- */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
           <Button variant="ghost" size="icon" title="历史记录">
             <History className="h-5 w-5" />
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-lg">
+        {/* 修改：使用flex布局，并限制了最大高度，让内部元素可以正确伸缩 */}
+        <DialogContent className="sm:max-w-lg flex flex-col max-h-[80vh]">
           <DialogHeader>
             <DialogTitle>历史对话</DialogTitle>
           </DialogHeader>
-          <div className="py-2">
+          
+          {/* 修改：让这个 div 成为可伸缩的主体，并处理 overflow */}
+          <div className="flex-1 overflow-y-auto -mr-6 pr-6">
             {sortedChats.length === 0 ? (
               <div className="text-center p-4 text-muted-foreground">
                 没有聊天记录
               </div>
             ) : (
-              <ScrollArea className="h-[400px] pr-4">
                 <div className="space-y-2">
                   {sortedChats.map((chat) => {
-                    // Get the first user message as preview
+                    if (!chat || !Array.isArray(chat.messages)) {
+                      return null; 
+                    }
+
                     const previewMessage = chat.messages.find(
-                      (m) => m.role === "user"
+                      (m) => m && m.role === "user"
                     );
                     const preview = previewMessage?.content || "无内容";
-
-                    // Get conversation length info
                     const messageCount = chat.messages.length;
                     const lastUpdated = format(
                       new Date(chat.updatedAt),
@@ -91,31 +95,23 @@ export function HistoryDialog() {
                     return (
                       <div
                         key={chat.id}
-                        className="relative group flex flex-col space-y-1 rounded-lg border p-3 hover:bg-muted/50"
+                        className="group relative flex cursor-pointer flex-col rounded-lg border p-3 text-left transition-colors hover:bg-muted/50"
+                        onClick={() => handleSelectChat(chat.id, chat.conversationId)}
                       >
-                        <div
-                          className="flex items-center justify-between cursor-pointer"
-                          onClick={() => handleSelectChat(chat.id, chat.conversationId)}
-                        >
-                          <h4 className="font-medium">{chat.title}</h4>
-                          <span className="text-xs text-muted-foreground">
-                            {lastUpdated}
-                          </span>
-                        </div>
-                        <p
-                          className="text-sm text-muted-foreground line-clamp-2 cursor-pointer"
-                          onClick={() => handleSelectChat(chat.id, chat.conversationId)}
-                        >
+                        <h4 className="min-w-0 flex-1 truncate font-semibold text-primary">
+                          {chat.title}
+                        </h4>
+                        <p className="mt-1 flex-1 break-words text-sm text-muted-foreground line-clamp-2">
                           {preview}
                         </p>
-                        <div className="flex justify-between items-center">
+                        <div className="mt-2 flex items-center justify-between">
                           <span className="text-xs text-muted-foreground">
-                            {messageCount} 条消息
+                            {messageCount} 条消息 · {lastUpdated}
                           </span>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
+                            className="h-7 w-7 p-1 opacity-0 transition-opacity group-hover:opacity-100"
                             onClick={(e) => {
                               e.stopPropagation();
                               setChatToDelete(chat.id);
@@ -128,7 +124,6 @@ export function HistoryDialog() {
                     );
                   })}
                 </div>
-              </ScrollArea>
             )}
           </div>
         </DialogContent>

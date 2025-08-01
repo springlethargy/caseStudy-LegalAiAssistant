@@ -3,57 +3,98 @@ import { streamDifyEvents } from "@/lib/dify";
 
 export const runtime = "edge";
 
+// 修改：增加 answer 和 answer_idea 可选字段，并增加 isNewConversation
 export interface ChatRequest {
 	message: string;
 	userId?: string;
+	question_type: string;
+	answer?: string;
+	answer_idea?: string;
+	isNewConversation?: boolean; // 新增
 }
 
 export async function POST(
 	request: Request,
-	{ params }: { params: Promise<{ id: string }> },
+	{ params }: { params: { id: string } }, 
 ) {
 	try {
-		const localConversationId = await params;
+		const clientConversationId = params.id; 
 
-		const { message, userId } = (await request.json()) as ChatRequest;
+		const { message, userId, question_type, answer, answer_idea, isNewConversation } =
+			(await request.json()) as ChatRequest;
+
+		const conversationIdForDify = isNewConversation ? "" : clientConversationId;
 
 		// Use a readable stream to handle the streaming response
 		const stream = new ReadableStream({
 			async start(controller) {
 				try {
-					// Use the streamDifyEvents function to get parsed events
-					for await (const event of streamDifyEvents(message, "", userId)) {
+					// --- 修改：增加标志位和变量，为方案B做准备 ---
+					let messageReceived = false;
+					let finalAnswerFromOutputs = "";
+					let finalConversationId = "";
+
+					for await (const event of streamDifyEvents(
+						message,
+						conversationIdForDify,
+						userId,
+						question_type,
+						answer,
+						answer_idea
+					)) {
+						if (event.conversation_id) {
+							finalConversationId = event.conversation_id; // 持续捕获最新的会话ID
+						}
+
 						if (event.event === "message" && event.answer) {
-							// For message events, send only the answer chunks
+							messageReceived = true; // 标记我们收到了流式消息
 							controller.enqueue(
-								`${JSON.stringify({
+								`data: ${JSON.stringify({
 									type: "content",
 									content: event.answer,
-								})}\n`,
+									conversationId: event.conversation_id
+								})}\n\n`,
 							);
 						} else if (event.event === "workflow_finished") {
-							// Send metadata about the completion but preserve our local conversationId
+							// 尝试从结束事件的 outputs 中提取 answer 字段
+							if (event.data?.outputs?.answer) {
+								finalAnswerFromOutputs = event.data.outputs.answer as string;
+                            }
+							// 发送元数据事件
 							controller.enqueue(
-								`${JSON.stringify({
+								`data: ${JSON.stringify({
 									type: "metadata",
 									totalTokens: event.data?.total_tokens,
 									elapsedTime: event.data?.elapsed_time,
-									conversationId: localConversationId.id,
-								})}\n`,
+									conversationId: event.conversation_id, 
+								})}\n\n`,
 							);
 						}
 					}
 
+					// --- 新增：方案B的核心逻辑 ---
+					// 在整个流程结束后，检查是否收到过流式消息
+					if (!messageReceived && finalAnswerFromOutputs) {
+						// 如果从未收到过，并且我们在结束事件里找到了答案，就在这里把它作为单次 content 事件发送出去
+						controller.enqueue(
+							`data: ${JSON.stringify({
+								type: "content",
+								content: finalAnswerFromOutputs,
+								conversationId: finalConversationId
+							})}\n\n`,
+						);
+					}
+
 					// Signal completion
-					controller.enqueue(`${JSON.stringify({ type: "done" })}\n`);
+					controller.enqueue(`data: ${JSON.stringify({ type: "done" })}\n\n`);
 					controller.close();
 				} catch (error) {
 					console.error("Error processing stream:", error);
 					controller.enqueue(
-						`${JSON.stringify({
+						`data: ${JSON.stringify({
 							type: "error",
 							error: error instanceof Error ? error.message : "Unknown error",
-						})}\n`,
+						})}\n\n`,
 					);
 					controller.close();
 				}
