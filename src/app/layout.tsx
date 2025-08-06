@@ -14,8 +14,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Ask UCASS - AI Chatbot",
-  description: "Chat with AI about UCASS",
+
+  title: "案研社 - AI 案例分析助教",
+
+  description: "一个专注于鉴定式案例分析的智能助教。",
+
 };
 
 export default function RootLayout({

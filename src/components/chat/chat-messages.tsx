@@ -59,7 +59,7 @@ export default function ChatMessages({
               </Avatar>
               <div className="flex-1">
                 <div className="text-sm font-medium mb-1">
-                  {message.role === "assistant" ? "社答" : "我"}
+                  {message.role === "assistant" ? "Assistant" : "我"}
                 </div>
                 <article className="prose prose-slate prose-sm dark:prose-invert">
                   <ReactMarkdown>
