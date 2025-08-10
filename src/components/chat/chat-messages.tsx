@@ -62,7 +62,29 @@ export default function ChatMessages({
                   {message.role === "assistant" ? "Assistant" : "我"}
                 </div>
                 <article className="prose prose-slate prose-sm dark:prose-invert">
-                  <ReactMarkdown>
+                  <ReactMarkdown
+                    // [新增]：添加 components 属性来自定义元素渲染
+                    components={{
+                      // [新增]：定义如何渲染 img 元素
+                      img: ({ node, ...props }) => {
+                        // [修改]：在原有的检查基础上，增加一次类型检查
+                        // 这样可以确保传递给 next/image 的 src 必定是字符串
+                        if (props.src && typeof props.src === 'string') {
+                          return (
+                            <Image
+                              src={props.src}
+                              alt={props.alt || "markdown image"} // [新增]：提供一个默认的 alt 文本
+                              width={500} // [新增]：next/image 需要明确的尺寸，这里提供一个默认值
+                              height={300} // [新增]：您可以根据需要调整或动态计算这些值
+                              className="rounded-md"
+                            />
+                          );
+                        }
+                        // [新增]：如果 src 为空或类型不是 string，则不渲染任何元素
+                        return null;
+                      },
+                    }}
+                  >
                     {message.content}
                   </ReactMarkdown>
                 </article>

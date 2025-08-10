@@ -109,7 +109,7 @@ export function useChat() {
 			const reader = stream?.getReader();
 			if (!reader) throw new Error("Failed to get stream reader.");
 			const decoder = new TextDecoder("utf-8");
-			let contentAccumulator = "";
+			// [MODIFICATION]: 删除了 contentAccumulator 变量
             let buffer = ""; 
 
 			while (true) {
@@ -134,8 +134,14 @@ export function useChat() {
 						switch (response.type) {
 							case "content":
 								if (response.content) {
-									// --- 修改：方案B的核心逻辑，不再直接更新，而是先累积完整内容 ---
-									contentAccumulator += response.content;
+									// --- [MODIFICATION]: 实现真正的流式更新 ---
+									// 不再使用累加器，而是直接更新 zustand store
+									const currentChatState = useChatStore.getState().chats.find(c => c.id === chatId);
+									if (currentChatState && currentChatState.messages[assistantMessageIndex]) {
+										const currentContent = currentChatState.messages[assistantMessageIndex].content;
+										const newContent = currentContent + response.content;
+										updateMessageContent(chatId, assistantMessageIndex, newContent);
+									}
 								}
 								break;
 							case "metadata":
@@ -162,26 +168,11 @@ export function useChat() {
 				}
 			}
 
-			setIsLoading(false); // 修改：将 setIsLoading(false) 从 finally 移到此处，在开始打字前执行
+			// --- [MODIFICATION]: 在数据流完全结束后，统一更新状态 ---
+			setIsLoading(false); 
+			setIsTyping(false);
 
-			// --- 新增：方案B的打字机效果实现 ---
-			// 在数据流完全结束后，如果累积到了内容，则开始模拟打字机
-			if (contentAccumulator) {
-				let currentText = "";
-				let charIndex = 0;
-				const intervalId = setInterval(() => {
-					if (charIndex < contentAccumulator.length) {
-						currentText += contentAccumulator[charIndex];
-						updateMessageContent(chatId, assistantMessageIndex, currentText);
-						charIndex++;
-					} else {
-						clearInterval(intervalId); // 打印完成，清除定时器
-						setIsTyping(false); // 修改：打字结束后，设置 isTyping 为 false
-					}
-				}, 1); // 修改：将速度从5ms调整为1ms，达到最快速度。您可以根据需要调整这个值。
-			} else {
-				setIsTyping(false); // 如果没有内容，直接结束Typing状态
-			}
+			// --- [MODIFICATION]: 删除了整个基于 setInterval 的伪流式打字机代码块 ---
 
 		} catch (error) {
 			console.error("Error sending message or processing stream:", error);
@@ -201,6 +192,7 @@ export function useChat() {
 					chatId,
 					"assistant",
 					`抱歉，发送消息时遇到错误： ${errorMessage}`,
+
 				);
 			}
 			// 修改：在出错时，确保所有状态都重置
